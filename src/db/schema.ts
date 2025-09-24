@@ -10,7 +10,6 @@ import {
   index,
   pgEnum,
   numeric,
-  jsonb,
 } from "drizzle-orm/pg-core";
 
 /*************************
@@ -110,7 +109,6 @@ export const categories = pgTable(
   },
   (t) => ({
     categorySlugUq: uniqueIndex("categories_slug_uq").on(t.slug),
-    // ✅ self-reference
     parentFk: foreignKey({
       columns: [t.parentId],
       foreignColumns: [t.id],
@@ -135,16 +133,15 @@ export const products = pgTable(
       .references(() => categories.id),
     name: text("name").notNull(),
     slug: text("slug").notNull().unique(),
+    shortDescription: text("short_description"),
     description: text("description"),
     originalPrice: numeric("original_price", {
       precision: 10,
       scale: 2,
     }).notNull(),
     discount: integer("discount").default(0),
-    colors: text("colors").array(),
     images: text("images").array(),
-    sizes:
-      jsonb("sizes").$type<{ size: string; price: number; stock: number }[]>(),
+    tags: text("tags").array(),
     isActive: boolean("is_active").default(true),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -154,6 +151,81 @@ export const products = pgTable(
     productByVendor: index("product_vendor_idx").on(t.vendorId),
     productByBrand: index("product_brand_idx").on(t.brandId),
     productBySlug: index("product_slug_idx").on(t.slug),
+  })
+);
+
+/*************************
+ * PRODUCT SPECIFICATIONS
+ *************************/
+export const productSpecifications = pgTable(
+  "product_specifications",
+  {
+    id: serial("id").primaryKey(),
+    productId: integer("product_id")
+      .notNull()
+      .references(() => products.id),
+    section: text("section").notNull(), // e.g., Processor, Display
+    key: text("key").notNull(), // e.g., RAM Type
+    value: text("value").notNull(), // e.g., DDR4
+  },
+  (t) => ({
+    specProductIdx: index("spec_product_idx").on(t.productId),
+  })
+);
+
+/*************************
+ * PRODUCT WARRANTY
+ *************************/
+export const productWarranty = pgTable(
+  "product_warranty",
+  {
+    id: serial("id").primaryKey(),
+    productId: integer("product_id")
+      .notNull()
+      .references(() => products.id),
+    details: text("details").notNull(), // e.g., 2 Years Warranty
+  },
+  (t) => ({
+    warrantyProductIdx: index("warranty_product_idx").on(t.productId),
+  })
+);
+
+/*************************
+ * PRODUCT Q&A
+ *************************/
+export const productQuestions = pgTable(
+  "product_questions",
+  {
+    id: serial("id").primaryKey(),
+    productId: integer("product_id")
+      .notNull()
+      .references(() => products.id),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id),
+    question: text("question").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    questionProductIdx: index("question_product_idx").on(t.productId),
+  })
+);
+
+export const productAnswers = pgTable(
+  "product_answers",
+  {
+    id: serial("id").primaryKey(),
+    questionId: integer("question_id")
+      .notNull()
+      .references(() => productQuestions.id),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id),
+    answer: text("answer").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    answerQuestionIdx: index("answer_question_idx").on(t.questionId),
   })
 );
 
