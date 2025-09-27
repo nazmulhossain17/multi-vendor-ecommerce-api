@@ -10,6 +10,7 @@ import {
   index,
   pgEnum,
   numeric,
+  jsonb,
 } from "drizzle-orm/pg-core";
 
 /*************************
@@ -155,81 +156,6 @@ export const products = pgTable(
 );
 
 /*************************
- * PRODUCT SPECIFICATIONS
- *************************/
-export const productSpecifications = pgTable(
-  "product_specifications",
-  {
-    id: serial("id").primaryKey(),
-    productId: integer("product_id")
-      .notNull()
-      .references(() => products.id),
-    section: text("section").notNull(), // e.g., Processor, Display
-    key: text("key").notNull(), // e.g., RAM Type
-    value: text("value").notNull(), // e.g., DDR4
-  },
-  (t) => ({
-    specProductIdx: index("spec_product_idx").on(t.productId),
-  })
-);
-
-/*************************
- * PRODUCT WARRANTY
- *************************/
-export const productWarranty = pgTable(
-  "product_warranty",
-  {
-    id: serial("id").primaryKey(),
-    productId: integer("product_id")
-      .notNull()
-      .references(() => products.id),
-    details: text("details").notNull(), // e.g., 2 Years Warranty
-  },
-  (t) => ({
-    warrantyProductIdx: index("warranty_product_idx").on(t.productId),
-  })
-);
-
-/*************************
- * PRODUCT Q&A
- *************************/
-export const productQuestions = pgTable(
-  "product_questions",
-  {
-    id: serial("id").primaryKey(),
-    productId: integer("product_id")
-      .notNull()
-      .references(() => products.id),
-    userId: integer("user_id")
-      .notNull()
-      .references(() => users.id),
-    question: text("question").notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-  },
-  (t) => ({
-    questionProductIdx: index("question_product_idx").on(t.productId),
-  })
-);
-
-export const productAnswers = pgTable(
-  "product_answers",
-  {
-    id: serial("id").primaryKey(),
-    questionId: integer("question_id")
-      .notNull()
-      .references(() => productQuestions.id),
-    userId: integer("user_id")
-      .notNull()
-      .references(() => users.id),
-    answer: text("answer").notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-  },
-  (t) => ({
-    answerQuestionIdx: index("answer_question_idx").on(t.questionId),
-  })
-);
-
-/*************************
  * ORDERS
  *************************/
 export const orders = pgTable(
@@ -320,3 +246,60 @@ export const reviews = pgTable(
     reviewUserIdx: index("review_user_idx").on(t.userId),
   })
 );
+
+/*************************
+ * PRODUCT QUESTIONS
+ *************************/
+export const productQuestions = pgTable("product_questions", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id")
+    .notNull()
+    .references(() => products.id),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
+  question: text("question").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+/*************************
+ * PRODUCT ANSWERS
+ *************************/
+export const productAnswers = pgTable("product_answers", {
+  id: serial("id").primaryKey(),
+  questionId: integer("question_id")
+    .notNull()
+    .references(() => productQuestions.id),
+  vendorId: integer("vendor_id")
+    .notNull()
+    .references(() => vendors.id),
+  answer: text("answer").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+/*************************
+ * PRODUCT SPECIFICATIONS
+ *************************/
+export const productSpecifications = pgTable("product_specifications", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id")
+    .notNull()
+    .references(() => products.id),
+  key: text("key").notNull(), // e.g. "CPU", "RAM", "Material"
+  value: text("value").notNull(), // e.g. "Intel i7", "16GB", "Cotton"
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+/*************************
+ * PRODUCT WARRANTY
+ *************************/
+export const productWarranty = pgTable("product_warranty", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id")
+    .notNull()
+    .references(() => products.id),
+  warrantyPeriod: text("warranty_period").notNull(), // e.g. "1 Year", "6 Months"
+  warrantyType: text("warranty_type"), // e.g. "Manufacturer", "Seller"
+  details: text("details"), // description of warranty coverage
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});

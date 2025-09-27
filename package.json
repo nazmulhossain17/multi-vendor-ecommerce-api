@@ -19,16 +19,21 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "drizzle-orm": "^0.44.5",
     "http": "^0.0.1-security",
+    "jsonwebtoken": "^9.0.2",
     "pg": "^8.16.3",
     "ts-node-dev": "^2.0.0",
     "winston": "^3.17.0",
-    "winston-daily-rotate-file": "^5.0.0"
+    "winston-daily-rotate-file": "^5.0.0",
+    "zod": "^4.1.11"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.3.1",
     "@types/pg": "^8.15.5",
     "dotenv": "^17.2.2",
