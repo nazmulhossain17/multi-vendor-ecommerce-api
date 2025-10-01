@@ -6,59 +6,58 @@ import {
   loginSchema,
   updateUserSchema,
 } from "./user.validation";
-import { UserController } from "./user.controller";
+import {
+  changePassword,
+  getAllUsers,
+  getProfile,
+  login,
+  registerUser,
+  updateProfile,
+} from "./user.controller";
 
 const router = Router();
 
 // Public routes
-router.post(
-  "/register",
-  validateBody(createUserSchema),
-  UserController.register
-);
-router.post("/login", validateBody(loginSchema), UserController.login);
+router.post("/register", validateBody(createUserSchema), registerUser);
+router.post("/login", validateBody(loginSchema), login);
 
 // Protected routes (require authentication)
-router.use(authenticateToken);
+// router.use(authenticateToken);
 
 // User profile routes
-router.get("/profile", UserController.getProfile);
-router.put(
-  "/profile",
-  validateBody(updateUserSchema),
-  UserController.updateProfile
-);
+router.get("/profile", getProfile);
+router.put("/profile", validateBody(updateUserSchema), updateProfile);
 router.post(
   "/change-password",
   validateBody(changePasswordSchema),
-  UserController.changePassword
+  changePassword
 );
 
 // Admin only routes
 router.get(
   "/",
-  requireAdmin,
-  validateQuery(paginationSchema),
-  UserController.getAllUsers
+  // requireAdmin,
+  // validateQuery(paginationSchema),
+  getAllUsers
 );
-router.get(
-  "/:id",
-  requireAdmin,
-  validateParams(idParamSchema),
-  UserController.getUserById
-);
-router.put(
-  "/:id",
-  requireAdmin,
-  validateParams(idParamSchema),
-  validateBody(updateUserSchema),
-  UserController.updateUser
-);
-router.delete(
-  "/:id",
-  requireAdmin,
-  validateParams(idParamSchema),
-  UserController.deleteUser
-);
+// router.get(
+//   "/:id",
+//   requireAdmin,
+//   validateParams(idParamSchema),
+//   .getUserById
+// );
+// router.put(
+//   "/:id",
+//   requireAdmin,
+//   validateParams(idParamSchema),
+//   validateBody(updateUserSchema),
+//   .updateUser
+// );
+// router.delete(
+//   "/:id",
+//   requireAdmin,
+//   validateParams(idParamSchema),
+//   .deleteUser
+// );
 
 export default router;

@@ -29,6 +29,13 @@
       "when": 1758960556378,
       "tag": "0003_bright_whistler",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1759236932075,
+      "tag": "0004_legal_arclight",
+      "breakpoints": true
     }
   ]
 }

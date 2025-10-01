@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+import jwt, { SignOptions } from "jsonwebtoken";
+import config from "../config/config";
 
 export const hashPassword = async (password: string): Promise<string> => {
   const saltRounds = 12;
@@ -13,14 +14,30 @@ export const comparePassword = async (
   return bcrypt.compare(password, hashedPassword);
 };
 
-export const generateToken = (payload: {
+export const generateAccessToken = (payload: {
   userId: number;
   email: string;
   role: string;
 }): string => {
-  return jwt.sign(payload, process.env.JWT_SECRET!, {
-    expiresIn: process.env.JWT_EXPIRES_IN || "7d",
-  });
+  const options: SignOptions = {
+    expiresIn: config.jwt.expires_in
+      ? parseInt(config.jwt.expires_in)
+      : undefined, // ✅ use expires_in, not secret
+  };
+  return jwt.sign(payload, config.jwt.secret as jwt.Secret, options);
+};
+
+export const generateRefreshToken = (payload: {
+  userId: number;
+  email: string;
+  role: string;
+}): string => {
+  const options: SignOptions = {
+    expiresIn: config.jwt.refresh_expires_in
+      ? parseInt(config.jwt.refresh_expires_in)
+      : undefined, // ✅ use refresh_expires_in
+  };
+  return jwt.sign(payload, config.jwt.refresh_secret as jwt.Secret, options);
 };
 
 export const generateSlug = (text: string): string => {

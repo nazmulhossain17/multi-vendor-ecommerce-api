@@ -1,62 +1,36 @@
 import { Request, Response, NextFunction } from "express";
-import { ZodSchema, ZodError } from "zod";
+import { ZodError, ZodObject } from "zod";
 
-export const validateBody = (schema: ZodSchema) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+export const validateBody =
+  (schema: ZodObject<any>) =>
+  (req: Request, res: Response, next: NextFunction) => {
+    // console.log("🔹 Incoming body:", req.body); // 👈 Debug body
+    console.log("🔹 Incoming query:", req.query);
+    console.log("🔹 Incoming params:", req.params);
+
     try {
-      req.body = schema.parse(req.body);
+      // Instead of wrapping in { body: req.body }, parse req.body directly
+      schema.parse(req.body);
+
       next();
-    } catch (error) {
+    } catch (error: any) {
       if (error instanceof ZodError) {
+        console.error("❌ Zod validation error:", error.issues);
+
         return res.status(400).json({
-          error: "Validation failed",
-          details: error.errors.map((err) => ({
-            field: err.path.join("."),
+          success: false,
+          error: error.issues.map((err: any) => ({
+            path: err.path,
             message: err.message,
+            received: req.body[err.path[0]], // 👈 log what was received
           })),
         });
       }
-      next(error);
-    }
-  };
-};
 
-export const validateParams = (schema: ZodSchema) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    try {
-      req.params = schema.parse(req.params);
-      next();
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({
-          error: "Invalid parameters",
-          details: error.errors.map((err) => ({
-            field: err.path.join("."),
-            message: err.message,
-          })),
-        });
-      }
-      next(error);
+      console.error("❌ Other validation error:", error);
+      return res.status(400).json({
+        success: false,
+        error: error.message || "Validation failed",
+      });
     }
   };
-};
-
-export const validateQuery = (schema: ZodSchema) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    try {
-      req.query = schema.parse(req.query);
-      next();
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({
-          error: "Invalid query parameters",
-          details: error.errors.map((err) => ({
-            field: err.path.join("."),
-            message: err.message,
-          })),
-        });
-      }
-      next(error);
-    }
-  };
-};
