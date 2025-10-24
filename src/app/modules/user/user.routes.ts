@@ -9,23 +9,29 @@ import {
 import {
   changePassword,
   getAllUsers,
+  getLoggedInUser,
   getProfile,
   login,
+  refreshToken,
   registerUser,
   updateProfile,
 } from "./user.controller";
+import isAuthenticated from "../../middleware/isAuthenticated";
 
 const router = Router();
 
 // Public routes
+router.get("/logged-in-user", isAuthenticated, getLoggedInUser)
+router.get("/profile", isAuthenticated, getProfile);
 router.post("/register", validateBody(createUserSchema), registerUser);
 router.post("/login", validateBody(loginSchema), login);
+router.post("/refresh-token", refreshToken);
 
 // Protected routes (require authentication)
 // router.use(authenticateToken);
 
 // User profile routes
-router.get("/profile", getProfile);
+
 router.put("/profile", validateBody(updateUserSchema), updateProfile);
 router.post(
   "/change-password",

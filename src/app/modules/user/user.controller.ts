@@ -6,7 +6,7 @@ import {
   generateAccessToken,
   generateRefreshToken,
 } from "../../utils/auth.utils";
-
+import jwt from "jsonwebtoken";
 import type {
   CreateUserInput,
   UpdateUserInput,
@@ -15,6 +15,8 @@ import type {
 } from "./user.validation";
 import { db } from "../../db";
 import { users } from "../../db/schema";
+import { setCookies } from "../../utils/setCookies";
+import config from "../../config/config";
 
 // ✅ Register new user
 export const registerUser = async (req: Request, res: Response) => {
@@ -80,7 +82,7 @@ export const login = async (req: Request, res: Response) => {
   try {
     const { email, password }: LoginInput = req.body;
 
-    const user = await db
+    const [user] = await db
       .select({
         id: users.id,
         name: users.name,
@@ -95,49 +97,104 @@ export const login = async (req: Request, res: Response) => {
       .where(eq(users.email, email))
       .limit(1);
 
-    if (!user.length) {
+    if (!user) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    if (!user[0].isActive) {
+    if (!user.isActive) {
       return res.status(401).json({ error: "Account is deactivated" });
     }
 
-    const isValidPassword = await comparePassword(password, user[0].password);
+    const isValidPassword = await comparePassword(password, user.password);
     if (!isValidPassword) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    // Generate tokens
+    // Generate tokens (consistent payload with isAuthenticated)
     const accessToken = generateAccessToken({
-      userId: user[0].id,
-      email: user[0].email,
-      role: user[0].role,
+      userId: user.id,
+      email: user.email,
+      role: user.role,
     });
 
     const refreshToken = generateRefreshToken({
-      userId: user[0].id,
-      email: user[0].email,
-      role: user[0].role,
+      userId: user.id,
+      email: user.email,
+      role: user.role,
     });
 
-    // Store refresh token in HTTP-only cookie
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    // Store tokens in cookies
+    setCookies(res, "refreshToken", refreshToken);
+    setCookies(res, "accessToken", accessToken);
 
-    const { password: _, ...userWithoutPassword } = user[0];
+    const { password: _, ...userWithoutPassword } = user;
 
     return res.status(200).json({
       user: userWithoutPassword,
+      // Optionally return tokens if frontend needs them directly:
       // accessToken,
+      // refreshToken,
     });
   } catch (error) {
     console.error("Login error:", error);
-    return res.status(500).json({ error: "Login failed" });
+    return res.status(500).json({ error: "Login failed! Please try again" });
+  }
+};
+
+// refresh token
+export const refreshToken = async (req: Request, res: Response) => {
+  try {
+    const refreshToken = req.cookies.refreshToken;
+    if (!refreshToken) {
+      return res.status(401).json({ error: "Refresh token missing" });
+    }
+
+    // Verify refresh token
+    const decoded = jwt.verify(refreshToken, config.jwt.refresh_secret!) as {
+      id: number;
+      email: string;
+      role: "admin" | "vendor" | "customer";
+    };
+
+    if (!decoded) {
+      return res.status(401).json({ error: "Invalid refresh token" });
+    }
+
+    // Check if user still exists and is active
+    const [user] = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        role: users.role,
+        isActive: users.isActive,
+      })
+      .from(users)
+      .where(eq(users.id, decoded.id))
+      .limit(1);
+
+    if (!user || !user.isActive) {
+      return res.status(401).json({ error: "User not found or inactive" });
+    }
+
+    // Generate new access token
+    const newAccessToken = generateAccessToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    });
+
+    // Set cookie again
+    res.cookie("accessToken", newAccessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 15 * 60 * 1000, // 15 minutes
+    });
+
+    return res.status(200).json({ message: "Token refreshed" });
+  } catch (error) {
+    console.error("Refresh token error:", error);
+    return res.status(401).json({ error: "Invalid or expired refresh token" });
   }
 };
 
@@ -263,6 +320,23 @@ export const changePassword = async (req: Request, res: Response) => {
     return res.status(500).json({ error: "Failed to change password" });
   }
 };
+
+// get logged in user
+export const getLoggedInUser = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const user = await db.select({ id: users.id }).from(users).where(eq(users.id, userId)).limit(1);
+    if (!user.length) {
+      return res.status(404).json({ error: "User not found" }); 
+    }
+    return res.status(200).json({ user: user[0] }); 
+  } catch (error) {
+    console.error("Get logged in user error:", error);
+    return res.status(500).json({ error: "Failed to retrieve logged in user" }); 
+  }
+};
+
+
 
 // ✅ Get all users (admin)
 export const getAllUsers = async (req: Request, res: Response) => {

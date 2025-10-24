@@ -2,16 +2,19 @@ import "express";
 
 declare global {
   namespace Express {
-    // match your JWT payload shape
     interface UserPayload {
-      id: number;
-      email: string;
-      role: string;
+      userId: string;
+      email?: string;
+      role?: string;
     }
 
-    // extend Request
     interface Request {
       user?: UserPayload;
+      token?: string;
+      userRole?: {
+        level: number | null;
+        name: string | null;
+      } | null;
     }
   }
 }

@@ -1,12 +1,20 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
-import { errorHandler } from "./middlewares/errorHandler";
-import userRouter from "./app/user/user.routes";
+import cookieParser from "cookie-parser";
+import authRouter from "./app/modules/whoami/whoami.controller";
+import userRouter from "./app/modules/user/user.routes";
+import { errorHandler } from "./middleware/errorHandler";
 
 const app = express();
 
 // Middlewares
-app.use(cors());
+app.use(cors(
+  {
+    origin: "http://localhost:3000",
+    credentials: true,
+  }
+));
+app.use(cookieParser());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -16,7 +24,8 @@ app.get("/health", (req: Request, res: Response) => {
 });
 
 // Routes
-app.use("/api/v1", userRouter);
+// app.use("/api/v1", userRouter);
+app.use("/api", authRouter)
 
 // Test route
 app.get("/", (req: Request, res: Response) => {
